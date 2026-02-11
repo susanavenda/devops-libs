@@ -1,0 +1,69 @@
+name: Auto-Provision Infrastructure
+
+on:
+  push:
+    branches: ['${{ github.event.repository.default_branch }}']
+    paths:
+      - 'infrastructure-template.yml'
+      - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to provision'
+        required: false
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  auto-provision:
+    name: Auto-Provision Infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect project type
+        id: detect
+        run: |
+          if [ -f "package.json" ]; then
+            APP_TYPE="web"
+            RUNTIME="nodejs"
+            PROJECT_NAME=$(node -e "console.log(require('./package.json').name || '${{ github.repository }}')" 2>/dev/null || echo "${{ github.repository }}")
+          elif [ -f "pom.xml" ]; then
+            APP_TYPE="api"
+            RUNTIME="java"
+            PROJECT_NAME=$(grep -oP '(?<=<artifactId>)[^<]+' pom.xml | head -1 || echo "${{ github.repository }}")
+          else
+            APP_TYPE="containerized"
+            RUNTIME="nodejs"
+            PROJECT_NAME="${{ github.repository }}"
+          fi
+          
+          echo "app-type=$APP_TYPE" >> $GITHUB_OUTPUT
+          echo "runtime=$RUNTIME" >> $GITHUB_OUTPUT
+          echo "project-name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+
+      - name: Provision Infrastructure as Service
+        uses: susanavenda/devops-toolkit/.github/workflows/deploy-infrastructure-as-service.yml@main
+        with:
+          action: provision
+          config-file: infrastructure-template.yml
+
+      - name: Output infrastructure URL
+        run: |
+          echo "## 🚀 Infrastructure Ready!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Your infrastructure has been automatically provisioned." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. Push your code" >> $GITHUB_STEP_SUMMARY
+          echo "2. Infrastructure will automatically deploy your application" >> $GITHUB_STEP_SUMMARY
+          echo "3. Check the deployment workflow for your application URL" >> $GITHUB_STEP_SUMMARY

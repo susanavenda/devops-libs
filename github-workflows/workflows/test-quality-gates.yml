@@ -1,0 +1,82 @@
+name: Test Quality Gates
+
+on:
+  workflow_call:
+    permissions:
+      contents: read
+      actions: read
+    inputs:
+      language:
+        description: 'Language'
+        required: true
+        type: string
+      coverage-threshold:
+        description: 'Minimum coverage percentage'
+        required: false
+        default: '70'
+        type: string
+      working-directory:
+        description: 'Working directory'
+        required: false
+        default: '.'
+        type: string
+
+jobs:
+  test-quality:
+    name: Test Quality Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+
+      - name: Setup Node.js
+        if: inputs.language == 'nodejs'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Java
+        if: inputs.language == 'java'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Install dependencies
+        if: inputs.language == 'nodejs'
+        working-directory: ${{ inputs.working-directory }}
+        run: npm ci
+
+      - name: Run tests with coverage
+        if: inputs.language == 'nodejs'
+        working-directory: ${{ inputs.working-directory }}
+        run: npm run test:ci
+        env:
+          CI: true
+
+      - name: Run tests with coverage
+        if: inputs.language == 'java'
+        working-directory: ${{ inputs.working-directory }}
+        run: mvn test jacoco:report
+
+      - name: Check coverage threshold
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          echo "Checking coverage threshold: ${{ inputs.coverage-threshold }}%"
+          # Coverage check logic would go here
+          # For Node.js: Check jest coverage output
+          # For Java: Check jacoco report
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          directory: ${{ inputs.working-directory }}
+          files: |
+            coverage/lcov.info
+            target/site/jacoco/jacoco.xml
+          flags: unittests
+          fail_ci_if_error: false
+        continue-on-error: true

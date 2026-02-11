@@ -1,0 +1,86 @@
+# Reusable workflow for GitHub Pages deployment
+name: Deploy to GitHub Pages
+
+on:
+  workflow_call:
+    inputs:
+      build-command:
+        required: false
+        type: string
+        default: 'npm run build'
+      install-command:
+        required: false
+        type: string
+        default: 'npm ci'
+      source-dir:
+        required: false
+        type: string
+        default: 'dist'
+      target-dir:
+        required: false
+        type: string
+        default: 'docs'
+      node-version:
+        required: false
+        type: string
+        default: '20'
+      working-directory:
+        required: false
+        type: string
+        default: '.'
+    secrets:
+      GITHUB_TOKEN:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: ${{ inputs.install-command }}
+
+      - name: Build
+        run: ${{ inputs.build-command }}
+
+      - name: Verify build
+        run: |
+          if [ ! -d "${{ inputs.source-dir }}" ]; then
+            echo "Build directory ${{ inputs.source-dir }} not found"
+            exit 1
+          fi
+          ls -la ${{ inputs.source-dir }}/
+
+      - name: Deploy to GitHub Pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          rm -rf ${{ inputs.target-dir }}
+          cp -r ${{ inputs.source-dir }} ${{ inputs.target-dir }}
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
+          git add ${{ inputs.target-dir }}
+          if git diff --staged --quiet; then
+            echo "No changes to deploy"
+          else
+            git commit -m "Deploy: update ${{ inputs.target-dir }} from ${{ github.ref_name }}"
+            git push origin ${{ github.ref_name }}
+          fi

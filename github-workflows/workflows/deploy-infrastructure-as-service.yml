@@ -1,0 +1,77 @@
+name: Deploy Infrastructure as Service
+
+on:
+  workflow_call:
+    inputs:
+      action:
+        description: 'Infrastructure action'
+        required: true
+        type: choice
+        options:
+          - provision
+          - update
+          - destroy
+      config-file:
+        description: 'Path to infrastructure template'
+        required: false
+        default: 'infrastructure-template.yml'
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  infrastructure-as-service:
+    name: Infrastructure as Service
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect project configuration
+        id: detect
+        run: |
+          # Auto-detect project type and runtime
+          if [ -f "package.json" ]; then
+            APP_TYPE="web"
+            RUNTIME="nodejs"
+            PROJECT_NAME=$(node -e "console.log(require('./package.json').name || 'app')" 2>/dev/null || echo "app")
+          elif [ -f "pom.xml" ]; then
+            APP_TYPE="api"
+            RUNTIME="java"
+            PROJECT_NAME=$(grep -oP '(?<=<artifactId>)[^<]+' pom.xml | head -1 || echo "app")
+          else
+            APP_TYPE="containerized"
+            RUNTIME="nodejs"
+            PROJECT_NAME="${{ github.repository }}"
+          fi
+          
+          echo "app-type=$APP_TYPE" >> $GITHUB_OUTPUT
+          echo "runtime=$RUNTIME" >> $GITHUB_OUTPUT
+          echo "project-name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+
+      - name: Provision Infrastructure
+        if: inputs.action == 'provision'
+        uses: susanavenda/devops-toolkit/.github/workflows/infrastructure-provision.yml@main
+        with:
+          project-name: ${{ steps.detect.outputs.project-name }}
+          app-type: ${{ steps.detect.outputs.app-type }}
+          runtime: ${{ steps.detect.outputs.runtime }}
+          environment: production
+          config-file: ${{ inputs.config-file }}
+        secrets:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Update Infrastructure
+        if: inputs.action == 'update'
+        run: |
+          echo "🔄 Updating infrastructure..."
+          echo "Infrastructure will be updated based on template changes"
+
+      - name: Destroy Infrastructure
+        if: inputs.action == 'destroy'
+        run: |
+          echo "🗑️ Destroying infrastructure..."
+          echo "⚠️ This would remove all infrastructure resources"

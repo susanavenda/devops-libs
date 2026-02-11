@@ -1,0 +1,133 @@
+name: CI (Dynamic)
+
+on:
+  push:
+    branches: ['${{ github.event.repository.default_branch }}', 'develop']
+  pull_request:
+    branches: ['${{ github.event.repository.default_branch }}']
+
+env:
+  DEVOPS_TOOLKIT_REPO: ${{ vars.DEVOPS_TOOLKIT_REPO || 'susanavenda/devops-toolkit' }}
+  DEVOPS_TOOLKIT_BRANCH: ${{ vars.DEVOPS_TOOLKIT_BRANCH || 'main' }}
+  DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+
+jobs:
+  detect-config:
+    name: Detect Project Configuration
+    runs-on: ubuntu-latest
+    outputs:
+      language: ${{ steps.detect.outputs.language }}
+      runtime-version: ${{ steps.detect.outputs.runtime-version }}
+      install-command: ${{ steps.detect.outputs.install-command }}
+      build-command: ${{ steps.detect.outputs.build-command }}
+      test-command: ${{ steps.detect.outputs.test-command }}
+      lint-command: ${{ steps.detect.outputs.lint-command }}
+      build-artifacts-path: ${{ steps.detect.outputs.build-artifacts-path }}
+      coverage-path: ${{ steps.detect.outputs.coverage-path }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Detect project configuration
+        id: detect
+        run: |
+          # Detect language from project files
+          if [ -f "package.json" ]; then
+            LANGUAGE="nodejs"
+            RUNTIME_VERSION=$(cat .nvmrc 2>/dev/null || echo "20")
+            INSTALL_CMD="npm ci"
+            BUILD_CMD=$(node -e "try { console.log(require('./package.json').scripts.build || 'npm run build') } catch(e) { console.log('npm run build') }" 2>/dev/null || echo "npm run build")
+            TEST_CMD=$(node -e "try { console.log(require('./package.json').scripts.test || 'npm test') } catch(e) { console.log('npm test') }" 2>/dev/null || echo "npm test")
+            LINT_CMD=$(node -e "try { console.log(require('./package.json').scripts.lint || 'npm run lint') } catch(e) { console.log('npm run lint') }" 2>/dev/null || echo "npm run lint")
+            ARTIFACTS="dist"
+            COVERAGE="coverage/lcov.info"
+          elif [ -f "pom.xml" ]; then
+            LANGUAGE="java"
+            RUNTIME_VERSION=$(cat .java-version 2>/dev/null || echo "21")
+            INSTALL_CMD="mvn -B dependency:resolve"
+            BUILD_CMD="mvn -B clean package"
+            TEST_CMD="mvn -B test"
+            LINT_CMD="mvn -B checkstyle:check"
+            ARTIFACTS="target/*.jar"
+            COVERAGE="target/site/jacoco/jacoco.xml"
+          elif [ -f "requirements.txt" ] || [ -f "pyproject.toml" ]; then
+            LANGUAGE="python"
+            RUNTIME_VERSION="3.11"
+            INSTALL_CMD="pip install -r requirements.txt"
+            BUILD_CMD="python setup.py build"
+            TEST_CMD="pytest"
+            LINT_CMD="pylint ."
+            ARTIFACTS="dist"
+            COVERAGE="coverage.xml"
+          elif [ -f "go.mod" ]; then
+            LANGUAGE="go"
+            RUNTIME_VERSION="1.21"
+            INSTALL_CMD="go mod download"
+            BUILD_CMD="go build ./..."
+            TEST_CMD="go test ./..."
+            LINT_CMD="golangci-lint run"
+            ARTIFACTS="bin"
+            COVERAGE="coverage.out"
+          elif find . -name "*.csproj" -type f | head -1 | grep -q .; then
+            LANGUAGE="dotnet"
+            RUNTIME_VERSION="8.0.x"
+            INSTALL_CMD="dotnet restore"
+            BUILD_CMD="dotnet build"
+            TEST_CMD="dotnet test"
+            LINT_CMD="dotnet format --verify-no-changes"
+            ARTIFACTS="bin"
+            COVERAGE="coverage.xml"
+          else
+            LANGUAGE="nodejs"
+            RUNTIME_VERSION="20"
+            INSTALL_CMD="npm ci"
+            BUILD_CMD="npm run build"
+            TEST_CMD="npm test"
+            LINT_CMD="npm run lint"
+            ARTIFACTS="dist"
+            COVERAGE="coverage/lcov.info"
+          fi
+          
+          echo "language=$LANGUAGE" >> $GITHUB_OUTPUT
+          echo "runtime-version=$RUNTIME_VERSION" >> $GITHUB_OUTPUT
+          echo "install-command=$INSTALL_CMD" >> $GITHUB_OUTPUT
+          echo "build-command=$BUILD_CMD" >> $GITHUB_OUTPUT
+          echo "test-command=$TEST_CMD" >> $GITHUB_OUTPUT
+          echo "lint-command=$LINT_CMD" >> $GITHUB_OUTPUT
+          echo "build-artifacts-path=$ARTIFACTS" >> $GITHUB_OUTPUT
+          echo "coverage-path=$COVERAGE" >> $GITHUB_OUTPUT
+          
+          echo "✅ Detected: $LANGUAGE ($RUNTIME_VERSION)"
+
+  pipeline:
+    name: Golden Pipeline
+    needs: detect-config
+    uses: ${{ env.DEVOPS_TOOLKIT_REPO }}/.github/workflows/golden-pipeline.yml@${{ env.DEVOPS_TOOLKIT_BRANCH }}
+    with:
+      language: ${{ needs.detect-config.outputs.language }}
+      runtime-version: ${{ needs.detect-config.outputs.runtime-version }}
+      install-command: ${{ needs.detect-config.outputs.install-command }}
+      build-command: ${{ needs.detect-config.outputs.build-command }}
+      test-command: ${{ needs.detect-config.outputs.test-command }}
+      lint-command: ${{ needs.detect-config.outputs.lint-command }}
+      working-directory: '.'
+      build-artifacts-path: ${{ needs.detect-config.outputs.build-artifacts-path }}
+      coverage-path: ${{ needs.detect-config.outputs.coverage-path }}
+      enable-sast: ${{ vars.ENABLE_SAST != 'false' }}
+      enable-dependency-scan: ${{ vars.ENABLE_DEPENDENCY_SCAN != 'false' }}
+      enable-secrets-scan: ${{ vars.ENABLE_SECRETS_SCAN != 'false' }}
+      enable-container-scan: ${{ vars.ENABLE_CONTAINER_SCAN != 'false' }}
+      enable-infrastructure-scan: ${{ vars.ENABLE_INFRASTRUCTURE_SCAN != 'false' }}
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      MAVEN_SETTINGS: ${{ secrets.MAVEN_SETTINGS }}
+
+  infrastructure-security:
+    name: Infrastructure Security
+    needs: detect-config
+    if: hashFiles('infrastructure/**/*.tf') != ''
+    uses: ${{ env.DEVOPS_TOOLKIT_REPO }}/.github/workflows/infrastructure-security.yml@${{ env.DEVOPS_TOOLKIT_BRANCH }}
+    with:
+      terraform-version: ${{ vars.TERRAFORM_VERSION || '1.6.0' }}
+      working-directory: ${{ vars.INFRASTRUCTURE_PATH || 'infrastructure' }}

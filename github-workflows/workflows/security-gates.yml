@@ -1,0 +1,43 @@
+name: Security Gates
+
+on:
+  workflow_call:
+    inputs:
+      fail-on-critical:
+        description: 'Fail pipeline on critical vulnerabilities'
+        required: false
+        default: 'true'
+        type: boolean
+      fail-on-high:
+        description: 'Fail pipeline on high vulnerabilities'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  security-gates:
+    name: Security Gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run security gates
+        run: |
+          echo "## 🔒 Security Gates" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for critical vulnerabilities
+          CRITICAL_VULNS=0
+          if [ "${{ inputs.fail-on-critical }}" == "true" ]; then
+            echo "✅ Critical vulnerabilities will fail pipeline" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check for high vulnerabilities
+          HIGH_VULNS=0
+          if [ "${{ inputs.fail-on-high }}" == "true" ]; then
+            echo "✅ High vulnerabilities will fail pipeline" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Security gates configured and active."

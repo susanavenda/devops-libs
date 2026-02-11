@@ -1,0 +1,44 @@
+# Infrastructure Template Configuration
+# Developers only need to fill this simple template - infrastructure is provisioned automatically
+
+project:
+  name: ${PROJECT_NAME}  # Auto-detected from repository name
+  environment: ${ENVIRONMENT:-production}  # production, staging, development
+
+application:
+  type: ${APP_TYPE}  # web, api, microservice, static-site, containerized
+  runtime: ${RUNTIME}  # nodejs, java, python, go, dotnet
+  port: ${PORT:-8080}  # Application port
+  health-check-path: ${HEALTH_CHECK_PATH:-/health}  # Health check endpoint
+
+scaling:
+  min-instances: ${MIN_INSTANCES:-1}
+  max-instances: ${MAX_INSTANCES:-3}
+  target-cpu: ${TARGET_CPU:-70}  # CPU utilization target for autoscaling
+
+database:
+  enabled: ${DATABASE_ENABLED:-false}
+  type: ${DATABASE_TYPE:-postgresql}  # postgresql, mysql, mongodb
+  size: ${DATABASE_SIZE:-small}  # small, medium, large
+
+storage:
+  enabled: ${STORAGE_ENABLED:-false}
+  type: ${STORAGE_TYPE:-s3}  # s3, ebs
+  size-gb: ${STORAGE_SIZE_GB:-10}
+
+networking:
+  domain: ${DOMAIN}  # Optional: custom domain
+  ssl-enabled: ${SSL_ENABLED:-true}
+  cdn-enabled: ${CDN_ENABLED:-false}
+
+monitoring:
+  enabled: ${MONITORING_ENABLED:-true}
+  log-retention-days: ${LOG_RETENTION_DAYS:-30}
+  alerting-enabled: ${ALERTING_ENABLED:-true}
+
+security:
+  secrets-management: ${SECRETS_MANAGEMENT:-true}  # Use secrets manager
+  encryption-at-rest: ${ENCRYPTION_AT_REST:-true}
+  encryption-in-transit: ${ENCRYPTION_IN_TRANSIT:-true}
+
+# That's it! Infrastructure is automatically provisioned based on these settings

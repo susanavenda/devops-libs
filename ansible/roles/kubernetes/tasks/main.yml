@@ -1,0 +1,68 @@
+---
+# Kubernetes Role
+# Installs and configures Kubernetes (kubeadm, kubelet, kubectl)
+
+- name: Disable swap
+  command: swapoff -a
+  become: yes
+  changed_when: false
+
+- name: Comment out swap in /etc/fstab
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].*?\sswap\s+sw\s+)'
+    replace: '#\1'
+  become: yes
+
+- name: Install Kubernetes dependencies
+  package:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gpg
+    state: present
+  when: ansible_os_family == "Debian"
+  become: yes
+
+- name: Add Kubernetes GPG key
+  apt_key:
+    url: https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key
+    state: present
+  when: ansible_os_family == "Debian"
+  become: yes
+
+- name: Add Kubernetes repository
+  apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /"
+    state: present
+    filename: kubernetes
+  when: ansible_os_family == "Debian"
+  become: yes
+
+- name: Install Kubernetes components
+  package:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+  become: yes
+
+- name: Hold Kubernetes packages
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+  when: ansible_os_family == "Debian"
+  become: yes
+
+- name: Start and enable kubelet
+  systemd:
+    name: kubelet
+    enabled: yes
+    state: started
+  become: yes

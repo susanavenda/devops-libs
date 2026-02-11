@@ -1,0 +1,95 @@
+# Reusable workflow for Java/Maven projects
+name: Java CI
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        required: false
+        type: string
+        default: '21'
+      distribution:
+        required: false
+        type: string
+        default: 'temurin'
+      maven-version:
+        required: false
+        type: string
+        default: '3.9.6'
+      build-command:
+        required: false
+        type: string
+        default: 'mvn -B clean package'
+      test-command:
+        required: false
+        type: string
+        default: 'mvn -B test'
+      working-directory:
+        required: false
+        type: string
+        default: '.'
+    secrets:
+      SONAR_TOKEN:
+        required: false
+      MAVEN_SETTINGS:
+        required: false
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: ${{ inputs.distribution }}
+          java-version: ${{ inputs.java-version }}
+          cache: maven
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Configure Maven settings
+        if: ${{ secrets.MAVEN_SETTINGS != '' }}
+        run: |
+          mkdir -p ~/.m2
+          echo "${{ secrets.MAVEN_SETTINGS }}" > ~/.m2/settings.xml
+
+      - name: Run tests
+        run: ${{ inputs.test-command }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build with Maven
+        run: |
+          if [ -n "${{ secrets.SONAR_TOKEN }}" ]; then
+            ${{ inputs.build-command }} sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+          else
+            ${{ inputs.build-command }}
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: build-artifacts
+          path: |
+            ${{ inputs.working-directory }}/target/*.jar
+            ${{ inputs.working-directory }}/target/*.war
+          retention-days: 7

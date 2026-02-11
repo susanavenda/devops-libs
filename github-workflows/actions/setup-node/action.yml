@@ -1,0 +1,42 @@
+name: 'Setup Node.js with Caching'
+description: 'Setup Node.js with npm cache and optional registry configuration'
+inputs:
+  node-version:
+    description: 'Node.js version'
+    required: false
+    default: '20'
+  cache-key:
+    description: 'Cache key (npm, yarn, pnpm)'
+    required: false
+    default: 'npm'
+  registry-url:
+    description: 'NPM registry URL'
+    required: false
+  scope:
+    description: 'NPM scope for authentication'
+    required: false
+  npm-token:
+    description: 'NPM token for private registries'
+    required: false
+outputs:
+  node-version:
+    description: 'The Node.js version that was set up'
+    value: ${{ steps.setup-node.outputs.node-version }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      id: setup-node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: ${{ inputs.cache-key }}
+        registry-url: ${{ inputs.registry-url }}
+        scope: ${{ inputs.scope }}
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-token }}
+    - name: Verify Node.js installation
+      shell: bash
+      run: |
+        node --version
+        npm --version

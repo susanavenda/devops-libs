@@ -1,0 +1,53 @@
+name: Security Compliance Check
+
+on:
+  schedule:
+    # Run weekly on Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  security-compliance:
+    name: Security Compliance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: '${{ github.repository }}'
+          path: '.'
+          format: 'ALL'
+          fail-on-cvss: 7.0
+
+      - name: Check Security Policies
+        run: |
+          echo "## Security Compliance Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for SECURITY.md
+          if [ -f "SECURITY.md" ]; then
+            echo "✅ SECURITY.md exists" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ SECURITY.md missing" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check for dependabot.yml
+          if [ -f ".github/dependabot.yml" ]; then
+            echo "✅ Dependabot configured" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Dependabot not configured" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check for security workflows
+          if [ -f ".github/workflows/security-audit.yml" ] || [ -f ".github/workflows/codeql-analysis.yml" ]; then
+            echo "✅ Security workflows configured" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Security workflows may be missing" >> $GITHUB_STEP_SUMMARY
+          fi

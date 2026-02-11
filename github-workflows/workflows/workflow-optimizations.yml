@@ -1,0 +1,28 @@
+# Workflow Optimization Best Practices
+# This file documents optimizations applied to all workflows
+
+# 1. Security Optimizations
+# - Pin actions to SHAs (not tags) to prevent supply-chain attacks
+# - Use OIDC for cloud provider authentication
+# - Limit workflow token permissions (least privilege)
+# - Use dependency-review-action for PR security checks
+
+# 2. Performance Optimizations
+# - Set job timeouts (30 minutes default)
+# - Use caching for dependencies (npm, maven, pip, etc.)
+# - Parallelize independent jobs
+# - Use concurrency controls to prevent redundant runs
+# - Optimize artifact retention (7 days default)
+
+# 3. Cost Optimizations
+# - Use self-hosted runners for high-volume projects
+# - Cancel redundant workflow runs
+# - Use matrix builds efficiently
+# - Cache Docker layers
+# - Optimize Terraform state operations
+
+# 4. Reliability Optimizations
+# - Add retry logic for flaky operations
+# - Use continue-on-error strategically
+# - Add health checks before deployment
+# - Implement rollback strategies

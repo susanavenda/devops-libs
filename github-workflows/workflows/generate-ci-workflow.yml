@@ -1,0 +1,42 @@
+name: Generate CI Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      project-path:
+        description: 'Path to project directory'
+        required: false
+        default: '.'
+  push:
+    paths:
+      - 'config/project-config.yml'
+      - 'package.json'
+      - 'pom.xml'
+      - '.nvmrc'
+      - '.java-version'
+
+jobs:
+  generate-workflow:
+    name: Generate CI Workflow from Config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate workflow from config
+        run: |
+          PROJECT_PATH="${{ inputs.project-path || '.' }}"
+          CONFIG_FILE="${PROJECT_PATH}/config/project-config.yml"
+          
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "⚠️ Config file not found, generating..."
+            bash scripts/generate-workflow-config.sh "$PROJECT_PATH"
+          fi
+          
+          # Read config values (simplified - in real implementation, use yq or similar)
+          echo "✅ Configuration loaded from $CONFIG_FILE"
+
+      - name: Update CI workflow
+        run: |
+          echo "Workflow would be updated based on config"
+          # This would generate/update .github/workflows/ci.yml dynamically

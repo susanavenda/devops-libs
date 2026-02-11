@@ -1,0 +1,78 @@
+# Generic Kubernetes Deployment template
+# Copy and customize for your application
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: APP_NAME
+  namespace: NAMESPACE
+  labels:
+    app: APP_NAME
+    version: VERSION
+spec:
+  replicas: REPLICAS
+  selector:
+    matchLabels:
+      app: APP_NAME
+  template:
+    metadata:
+      labels:
+        app: APP_NAME
+        version: VERSION
+    spec:
+      containers:
+      - name: APP_NAME
+        image: IMAGE_NAME:IMAGE_TAG
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: CONTAINER_PORT
+          name: http
+          protocol: TCP
+        env:
+        - name: ENV_VAR_NAME
+          value: "ENV_VAR_VALUE"
+        # Uncomment for ConfigMap
+        # envFrom:
+        # - configMapRef:
+        #     name: APP_NAME-config
+        # Uncomment for Secrets
+        # envFrom:
+        # - secretRef:
+        #     name: APP_NAME-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        # Uncomment for volume mounts
+        # volumeMounts:
+        # - name: config-volume
+        #   mountPath: /etc/config
+      # Uncomment for volumes
+      # volumes:
+      # - name: config-volume
+      #   configMap:
+      #     name: APP_NAME-config
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000

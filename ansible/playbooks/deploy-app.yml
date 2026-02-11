@@ -1,0 +1,78 @@
+---
+# Deploy Application Playbook
+# Generic playbook for deploying applications
+# Usage: ansible-playbook -i inventory deploy-app.yml
+
+- name: Deploy Application
+  hosts: app_servers
+  become: yes
+  vars:
+    app_name: "myapp"
+    app_version: "latest"
+    app_port: 8080
+    app_user: "appuser"
+    app_dir: "/opt/{{ app_name }}"
+    service_name: "{{ app_name }}"
+
+  tasks:
+    - name: Create application user
+      user:
+        name: "{{ app_user }}"
+        system: yes
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Download application artifact
+      get_url:
+        url: "{{ artifact_url }}"
+        dest: "{{ app_dir }}/{{ app_name }}.jar"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+      when: artifact_url is defined
+
+    - name: Copy application files
+      copy:
+        src: "{{ item }}"
+        dest: "{{ app_dir }}/"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+      loop: "{{ app_files | default([]) }}"
+      when: app_files is defined
+
+    - name: Create application configuration
+      template:
+        src: app.conf.j2
+        dest: "{{ app_dir }}/application.conf"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+      when: app_config_template is defined
+
+    - name: Create systemd service file
+      template:
+        src: systemd-service.j2
+        dest: "/etc/systemd/system/{{ service_name }}.service"
+        mode: '0644'
+      notify: restart app
+
+    - name: Enable and start application service
+      systemd:
+        name: "{{ service_name }}"
+        enabled: yes
+        state: started
+        daemon_reload: yes
+
+  handlers:
+    - name: restart app
+      systemd:
+        name: "{{ service_name }}"
+        state: restarted

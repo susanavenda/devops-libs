@@ -1,0 +1,18 @@
+# Generic Kubernetes ConfigMap template
+# Use for non-sensitive configuration
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: APP_NAME-config
+  namespace: NAMESPACE
+data:
+  # Add your configuration key-value pairs
+  config.properties: |
+    key1=value1
+    key2=value2
+  app.conf: |
+    server {
+      listen 8080;
+      server_name localhost;
+    }

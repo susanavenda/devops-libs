@@ -1,0 +1,85 @@
+# Reusable workflow - called by consuming repos (e.g. devops-architecture-implementation)
+# Source: github-workflows/workflows/infrastructure-security.yml
+name: Infrastructure Security Scan
+
+on:
+  workflow_call:
+    inputs:
+      terraform-version:
+        description: 'Terraform version'
+        required: false
+        default: '1.6.0'
+        type: string
+      working-directory:
+        description: 'Working directory'
+        required: false
+        default: 'infrastructure'
+        type: string
+
+jobs:
+  terraform-security:
+    name: Terraform Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: ${{ inputs.working-directory }}
+          framework: terraform
+          soft_fail: false
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+          fail_on_cvss: 7.0
+          check: CKV_AWS_20,CKV_AWS_23,CKV_AWS_24,CKV_AWS_57,CKV_AWS_58
+
+      - name: Upload Checkov results
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: checkov-results.sarif
+        continue-on-error: true
+
+      - name: Run Terrascan
+        uses: accurics/terrascan-action@v1
+        with:
+          iac_type: 'terraform'
+          iac_dir: ${{ inputs.working-directory }}
+          non_recursive: false
+          sarif_upload: true
+        continue-on-error: true
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: latest
+
+      - name: Run TFLint
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          tflint --init
+          tflint --format=default
+        continue-on-error: true
+
+      - name: Terraform Init
+        working-directory: ${{ inputs.working-directory }}
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        working-directory: ${{ inputs.working-directory }}
+        run: terraform validate
+
+      - name: Terraform Format Check
+        working-directory: ${{ inputs.working-directory }}
+        run: terraform fmt -check -recursive
+
+      - name: Security scan summary
+        run: |
+          echo "## 🔒 Infrastructure Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Checkov, Terrascan, TFLint, Terraform validation completed" >> $GITHUB_STEP_SUMMARY

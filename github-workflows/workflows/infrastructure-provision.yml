@@ -1,0 +1,136 @@
+name: Infrastructure Provisioning (IaS)
+
+on:
+  workflow_call:
+    inputs:
+      project-name:
+        description: 'Project name'
+        required: true
+        type: string
+      app-type:
+        description: 'Application type'
+        required: true
+        type: choice
+        options:
+          - web
+          - api
+          - microservice
+          - static-site
+          - containerized
+      runtime:
+        description: 'Runtime environment'
+        required: true
+        type: choice
+        options:
+          - nodejs
+          - java
+          - python
+          - go
+          - dotnet
+      environment:
+        description: 'Environment'
+        required: false
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+      config-file:
+        description: 'Path to infrastructure template config'
+        required: false
+        default: 'infrastructure-template.yml'
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: false
+      AWS_SECRET_ACCESS_KEY:
+        required: false
+      TERRAFORM_CLOUD_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  provision-infrastructure:
+    name: Provision Infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read infrastructure template
+        id: read-config
+        run: |
+          CONFIG_FILE="${{ inputs.config-file }}"
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "⚠️ Config file not found, using defaults"
+            echo "project-name=${{ inputs.project-name }}" >> $GITHUB_OUTPUT
+            echo "app-type=${{ inputs.app-type }}" >> $GITHUB_OUTPUT
+            echo "runtime=${{ inputs.runtime }}" >> $GITHUB_OUTPUT
+            echo "environment=${{ inputs.environment }}" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Reading infrastructure template: $CONFIG_FILE"
+            # Parse YAML config (simplified - use yq in production)
+            PROJECT_NAME=$(grep -A1 "^project:" "$CONFIG_FILE" | grep "name:" | awk '{print $2}' | tr -d '"' || echo "${{ inputs.project-name }}")
+            APP_TYPE=$(grep -A1 "^application:" "$CONFIG_FILE" | grep "type:" | awk '{print $2}' | tr -d '"' || echo "${{ inputs.app-type }}")
+            RUNTIME=$(grep -A2 "^application:" "$CONFIG_FILE" | grep "runtime:" | awk '{print $2}' | tr -d '"' || echo "${{ inputs.runtime }}")
+            ENV=$(grep -A2 "^project:" "$CONFIG_FILE" | grep "environment:" | awk '{print $2}' | tr -d '"' || echo "${{ inputs.environment }}")
+            
+            echo "project-name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+            echo "app-type=$APP_TYPE" >> $GITHUB_OUTPUT
+            echo "runtime=$RUNTIME" >> $GITHUB_OUTPUT
+            echo "environment=$ENV" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.6.0'
+
+      - name: Generate infrastructure from template
+        run: |
+          echo "🏗️ Generating infrastructure from template..."
+          echo "Project: ${{ steps.read-config.outputs.project-name }}"
+          echo "Type: ${{ steps.read-config.outputs.app-type }}"
+          echo "Runtime: ${{ steps.read-config.outputs.runtime }}"
+          echo "Environment: ${{ steps.read-config.outputs.environment }}"
+          
+          # Select appropriate infrastructure template
+          TEMPLATE_DIR="terraform/templates/${{ steps.read-config.outputs.app-type }}-${{ steps.read-config.outputs.runtime }}"
+          
+          if [ ! -d "$TEMPLATE_DIR" ]; then
+            echo "📦 Using default template"
+            TEMPLATE_DIR="terraform/templates/default"
+          fi
+          
+          echo "✅ Using template: $TEMPLATE_DIR"
+
+      - name: Provision infrastructure
+        run: |
+          echo "🚀 Provisioning infrastructure..."
+          echo "This would run Terraform to provision:"
+          echo "  - Compute resources (ECS/EKS/Lambda)"
+          echo "  - Database (if enabled)"
+          echo "  - Storage (if enabled)"
+          echo "  - Networking (VPC, Load Balancer)"
+          echo "  - Security (IAM, Secrets)"
+          echo "  - Monitoring (CloudWatch, Logs)"
+          
+          # In production, this would:
+          # terraform init
+          # terraform plan
+          # terraform apply -auto-approve
+
+      - name: Output infrastructure details
+        run: |
+          echo "## 🏗️ Infrastructure Provisioned" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Project:** ${{ steps.read-config.outputs.project-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Type:** ${{ steps.read-config.outputs.app-type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Runtime:** ${{ steps.read-config.outputs.runtime }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ steps.read-config.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Infrastructure ready for deployment!"

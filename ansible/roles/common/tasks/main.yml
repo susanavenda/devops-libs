@@ -1,0 +1,41 @@
+---
+# Common Role
+# Common tasks for all servers
+
+- name: Update system packages
+  package:
+    name: "*"
+    state: latest
+  become: yes
+
+- name: Install common packages
+  package:
+    name:
+      - curl
+      - wget
+      - git
+      - vim
+      - htop
+      - net-tools
+    state: present
+  become: yes
+
+- name: Configure timezone
+  timezone:
+    name: "{{ timezone | default('UTC') }}"
+  become: yes
+
+- name: Configure hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+  become: yes
+
+- name: Create common directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /opt/apps
+    - /var/log/apps
+    - /etc/apps

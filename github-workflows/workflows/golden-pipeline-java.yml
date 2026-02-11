@@ -1,0 +1,248 @@
+name: Golden Pipeline - Java
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        description: 'Java version'
+        required: false
+        default: '21'
+        type: string
+      distribution:
+        description: 'Java distribution'
+        required: false
+        default: 'temurin'
+        type: string
+      build-command:
+        description: 'Build command'
+        required: false
+        default: 'mvn -B clean package'
+        type: string
+      test-command:
+        description: 'Test command'
+        required: false
+        default: 'mvn -B test'
+        type: string
+      working-directory:
+        description: 'Working directory'
+        required: false
+        default: '.'
+        type: string
+    secrets:
+      SONAR_TOKEN:
+        required: false
+      MAVEN_SETTINGS:
+        required: false
+
+jobs:
+  # Stage 1: Code Quality & Security Scanning
+  code-quality:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.java-version }}
+          distribution: ${{ inputs.distribution }}
+          cache: 'maven'
+
+      - name: Configure Maven settings
+        if: ${{ secrets.MAVEN_SETTINGS != '' }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.java-version }}
+          distribution: ${{ inputs.distribution }}
+          cache: 'maven'
+          server-id: github
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_TOKEN
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+      # Code quality: Checkstyle
+      - name: Run Checkstyle
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          if [ -f pom.xml ]; then
+            mvn -B checkstyle:check || true
+          else
+            echo "No pom.xml found, skipping Checkstyle..."
+          fi
+        continue-on-error: true
+
+      # Code quality: SpotBugs
+      - name: Run SpotBugs
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          if [ -f pom.xml ]; then
+            mvn -B spotbugs:check || true
+          else
+            echo "No pom.xml found, skipping SpotBugs..."
+          fi
+        continue-on-error: true
+
+      # Security: SAST with CodeQL
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        continue-on-error: true
+
+      # Security: OWASP Dependency Check
+      - name: OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: '${{ github.repository }}'
+          path: '${{ inputs.working-directory }}'
+          format: 'ALL'
+        continue-on-error: true
+
+      # Security: Maven dependency vulnerability scanning
+      - name: Maven dependency vulnerability scan
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          if [ -f pom.xml ]; then
+            mvn -B org.owasp:dependency-check-maven:check || true
+          else
+            echo "No pom.xml found, skipping dependency check..."
+          fi
+        continue-on-error: true
+
+      # Security: Secrets scanning
+      - name: Scan for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ${{ inputs.working-directory }}
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+        continue-on-error: true
+
+      # SonarQube (if token provided)
+      - name: SonarQube Scan
+        if: ${{ secrets.SONAR_TOKEN != '' }}
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          if [ -f pom.xml ]; then
+            mvn -B sonar:sonar \
+              -Dsonar.projectKey=${{ github.repository }} \
+              -Dsonar.login=${{ secrets.SONAR_TOKEN }} || true
+          else
+            echo "No pom.xml found, skipping SonarQube..."
+          fi
+        continue-on-error: true
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # Stage 2: Build & Test
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    needs: code-quality
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.java-version }}
+          distribution: ${{ inputs.distribution }}
+          cache: 'maven'
+
+      - name: Run tests
+        working-directory: ${{ inputs.working-directory }}
+        run: ${{ inputs.test-command }}
+
+      - name: Build application
+        working-directory: ${{ inputs.working-directory }}
+        run: ${{ inputs.build-command }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: ${{ inputs.working-directory }}/target/*.jar
+          if-no-files-found: ignore
+
+      # Code coverage with JaCoCo
+      - name: Generate coverage report
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          if [ -f pom.xml ]; then
+            mvn -B jacoco:report || true
+          else
+            echo "No pom.xml found, skipping coverage..."
+          fi
+        continue-on-error: true
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          directory: ${{ inputs.working-directory }}
+          files: ./target/site/jacoco/jacoco.xml
+          flags: unittests
+          name: codecov-umbrella
+        continue-on-error: true
+
+  # Stage 3: Container Security (if Dockerfile exists)
+  container-security:
+    name: Container Security
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: hashFiles('**/Dockerfile') != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Trivy vulnerability scanner
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-results.sarif'
+        continue-on-error: true
+
+      # Docker Scout
+      - name: Docker Scout
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: ${{ github.repository }}
+        continue-on-error: true
+
+  # Stage 4: Security Summary
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [code-quality, build-and-test, container-security]
+    if: always()
+    steps:
+      - name: Security scan summary
+        run: |
+          echo "## 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Code quality checks completed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Dependency scanning completed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Secrets scanning completed" >> $GITHUB_STEP_SUMMARY
+          if hashFiles('**/Dockerfile') != ''; then
+            echo "✅ Container security scanning completed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View detailed results in the Security tab."

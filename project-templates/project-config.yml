@@ -1,0 +1,40 @@
+# Project Configuration File
+# This file contains dynamic configuration for CI/CD pipelines
+# Values are read by workflows to avoid hardcoded values
+
+project:
+  name: ${PROJECT_NAME}
+  repository: ${GITHUB_REPOSITORY}
+  default-branch: ${GITHUB_REF_NAME:-main}
+  
+language:
+  type: ${LANGUAGE_TYPE}  # nodejs, java, python, go, dotnet
+  runtime-version: ${RUNTIME_VERSION}  # e.g., 20, 21, 3.11, 1.21, 8.0.x
+  
+build:
+  install-command: ${INSTALL_COMMAND}
+  build-command: ${BUILD_COMMAND}
+  test-command: ${TEST_COMMAND}
+  lint-command: ${LINT_COMMAND}
+  format-command: ${FORMAT_COMMAND:-}
+  
+paths:
+  working-directory: ${WORKING_DIRECTORY:-.}
+  build-artifacts: ${BUILD_ARTIFACTS_PATH}
+  coverage: ${COVERAGE_PATH:-}
+  
+security:
+  enable-sast: ${ENABLE_SAST:-true}
+  enable-dependency-scan: ${ENABLE_DEPENDENCY_SCAN:-true}
+  enable-secrets-scan: ${ENABLE_SECRETS_SCAN:-true}
+  enable-container-scan: ${ENABLE_CONTAINER_SCAN:-true}
+  enable-infrastructure-scan: ${ENABLE_INFRASTRUCTURE_SCAN:-true}
+  fail-on-vulnerabilities: ${FAIL_ON_VULNERABILITIES:-true}
+  
+infrastructure:
+  terraform-version: ${TERRAFORM_VERSION:-1.6.0}
+  infrastructure-path: ${INFRASTRUCTURE_PATH:-infrastructure}
+  
+devops-toolkit:
+  repository: ${DEVOPS_TOOLKIT_REPO:-susanavenda/devops-toolkit}
+  branch: ${DEVOPS_TOOLKIT_BRANCH:-main}

@@ -1,0 +1,26 @@
+# Snyk configuration file template
+# Copy to project root and customize as needed
+# https://docs.snyk.io/features/snyk-cli/configure-snyk-cli
+
+# Exclude specific vulnerabilities (use with caution)
+# exclude:
+#   global:
+#     - SNYK-JS-MINIMIST-559764
+
+# Set severity threshold
+severity-threshold: high
+
+# Fail on vulnerabilities
+fail-on: all
+
+# Scan all dependencies
+all-projects: true
+
+# Include dev dependencies
+dev: true
+
+# Scan depth
+detection-depth: 4
+
+# Policy file location
+policy-path: .snyk.yaml

@@ -1,0 +1,135 @@
+name: Enhanced Security Scan
+
+on:
+  workflow_call:
+    inputs:
+      scan-type:
+        description: 'Type of security scan'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - secrets
+          - dependencies
+          - containers
+          - infrastructure
+    secrets:
+      SONAR_TOKEN:
+        required: false
+      SNYK_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  secrets-scan:
+    name: Secrets Scanning
+    runs-on: ubuntu-latest
+    if: inputs.scan-type == 'all' || inputs.scan-type == 'secrets'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: .
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: GitHub Secret Scanning
+        run: |
+          echo "GitHub Secret Scanning is enabled automatically"
+          echo "View results in Security tab"
+
+  dependency-scan:
+    name: Dependency Scanning
+    runs-on: ubuntu-latest
+    if: inputs.scan-type == 'all' || inputs.scan-type == 'dependencies'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: '${{ github.repository }}'
+          path: '.'
+          format: 'ALL'
+          fail-on-cvss: 7.0
+
+      - name: Snyk Security Scan
+        if: secrets.SNYK_TOKEN != ''
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+  container-scan:
+    name: Container Scanning
+    runs-on: ubuntu-latest
+    if: (inputs.scan-type == 'all' || inputs.scan-type == 'containers') && hashFiles('**/Dockerfile') != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t test-image:latest .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'test-image:latest'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  infrastructure-scan:
+    name: Infrastructure Scanning
+    runs-on: ubuntu-latest
+    if: (inputs.scan-type == 'all' || inputs.scan-type == 'infrastructure') && hashFiles('**/*.tf') != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform
+          soft_fail: false
+          fail_on_cvss: 7.0
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+
+      - name: Upload Checkov results
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: checkov-results.sarif
+
+      - name: Run Terrascan
+        uses: accurics/terrascan-action@v1
+        with:
+          iac_type: 'terraform'
+          iac_dir: '.'
+          non_recursive: true
+          sarif_upload: true
+        continue-on-error: true
