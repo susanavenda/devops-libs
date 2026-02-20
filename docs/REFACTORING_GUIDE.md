@@ -8,19 +8,19 @@ This guide provides step-by-step instructions for refactoring projects to follow
 
 ### 1. Standardize Configuration Files
 
-Copy standard configuration files from `devops-toolkit/templates/`:
+Copy standard configuration files from `devops-libs/templates/`:
 
 ```bash
 # For Node.js projects
-cp devops-toolkit/templates/.gitignore-nodejs .gitignore
-cp devops-toolkit/templates/.nvmrc .
-cp devops-toolkit/templates/.prettierrc.json .
-cp devops-toolkit/templates/.prettierignore .
-cp devops-toolkit/templates/.eslintrc.json .
+cp devops-libs/templates/.gitignore-nodejs .gitignore
+cp devops-libs/templates/.nvmrc .
+cp devops-libs/templates/.prettierrc.json .
+cp devops-libs/templates/.prettierignore .
+cp devops-libs/templates/.eslintrc.json .
 
 # For Java projects
-cp devops-toolkit/templates/.gitignore-java .gitignore
-cp devops-toolkit/templates/.java-version .
+cp devops-libs/templates/.gitignore-java .gitignore
+cp devops-libs/templates/.java-version .
 ```
 
 ### 2. Standardize Project Structure
@@ -76,7 +76,7 @@ Use the Golden Pipeline interface:
 ```yaml
 jobs:
   pipeline:
-    uses: susanavenda/devops-toolkit/.github/workflows/golden-pipeline.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/golden-pipeline.yml@main
     with:
       language: nodejs
       # ... configuration

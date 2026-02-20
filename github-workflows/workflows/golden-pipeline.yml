@@ -317,7 +317,7 @@ jobs:
       # Test Quality Gates - disabled for now to allow CI to pass
       # - name: Test Quality Gates
       #   if: inputs.test-command != ''
-      #   uses: susanavenda/devops-toolkit/.github/workflows/test-quality-gates.yml@main
+      #   uses: susanavenda/devops-libs/.github/workflows/test-quality-gates.yml@main
       #   with:
       #     language: ${{ inputs.language }}
       #     coverage-threshold: ${{ inputs.min-coverage || '0' }}

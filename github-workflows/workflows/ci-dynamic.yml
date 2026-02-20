@@ -7,8 +7,8 @@ on:
     branches: ['${{ github.event.repository.default_branch }}']
 
 env:
-  DEVOPS_TOOLKIT_REPO: ${{ vars.DEVOPS_TOOLKIT_REPO || 'susanavenda/devops-toolkit' }}
-  DEVOPS_TOOLKIT_BRANCH: ${{ vars.DEVOPS_TOOLKIT_BRANCH || 'main' }}
+  DEVOPS_LIBS_REPO: ${{ vars.DEVOPS_LIBS_REPO || 'susanavenda/devops-libs' }}
+  DEVOPS_LIBS_BRANCH: ${{ vars.DEVOPS_LIBS_BRANCH || 'main' }}
   DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
 
 jobs:
@@ -102,7 +102,7 @@ jobs:
   pipeline:
     name: Golden Pipeline
     needs: detect-config
-    uses: ${{ env.DEVOPS_TOOLKIT_REPO }}/.github/workflows/golden-pipeline.yml@${{ env.DEVOPS_TOOLKIT_BRANCH }}
+    uses: ${{ env.DEVOPS_LIBS_REPO }}/.github/workflows/golden-pipeline.yml@${{ env.DEVOPS_LIBS_BRANCH }}
     with:
       language: ${{ needs.detect-config.outputs.language }}
       runtime-version: ${{ needs.detect-config.outputs.runtime-version }}
@@ -127,7 +127,7 @@ jobs:
     name: Infrastructure Security
     needs: detect-config
     if: hashFiles('infrastructure/**/*.tf') != ''
-    uses: ${{ env.DEVOPS_TOOLKIT_REPO }}/.github/workflows/infrastructure-security.yml@${{ env.DEVOPS_TOOLKIT_BRANCH }}
+    uses: ${{ env.DEVOPS_LIBS_REPO }}/.github/workflows/infrastructure-security.yml@${{ env.DEVOPS_LIBS_BRANCH }}
     with:
       terraform-version: ${{ vars.TERRAFORM_VERSION || '1.6.0' }}
       working-directory: ${{ vars.INFRASTRUCTURE_PATH || 'infrastructure' }}

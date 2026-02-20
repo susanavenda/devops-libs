@@ -52,7 +52,7 @@ jobs:
           echo "project-name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
       - name: Provision Infrastructure as Service
-        uses: susanavenda/devops-toolkit/.github/workflows/deploy-infrastructure-as-service.yml@main
+        uses: susanavenda/devops-libs/.github/workflows/deploy-infrastructure-as-service.yml@main
         with:
           action: provision
           config-file: infrastructure-template.yml

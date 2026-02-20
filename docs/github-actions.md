@@ -11,7 +11,7 @@ For Node.js, React, or npm-based projects.
 ```yaml
 jobs:
   build:
-    uses: susanavenda/devops-toolkit/.github/workflows/nodejs-ci.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/nodejs-ci.yml@main
     with:
       node-version: '20'
       build-command: 'npm run build'
@@ -33,7 +33,7 @@ For Java/Maven projects.
 ```yaml
 jobs:
   build:
-    uses: susanavenda/devops-toolkit/.github/workflows/java-ci.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/java-ci.yml@main
     with:
       java-version: '21'
       build-command: 'mvn -B clean package'
@@ -46,7 +46,7 @@ Build and push Docker images.
 ```yaml
 jobs:
   build:
-    uses: susanavenda/devops-toolkit/.github/workflows/docker-build.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/docker-build.yml@main
     with:
       image-name: 'myapp'
       tags: 'latest'
@@ -62,7 +62,7 @@ Deploy static sites to GitHub Pages.
 ```yaml
 jobs:
   deploy:
-    uses: susanavenda/devops-toolkit/.github/workflows/github-pages-deploy.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/github-pages-deploy.yml@main
     with:
       build-command: 'npm run build'
       source-dir: 'dist'
@@ -77,7 +77,7 @@ jobs:
 
 ```yaml
 steps:
-  - uses: susanavenda/devops-toolkit/.github/actions/setup-node@main
+  - uses: susanavenda/devops-libs/.github/actions/setup-node@main
     with:
       node-version: '20'
       cache-key: 'npm'
@@ -87,7 +87,7 @@ steps:
 
 ```yaml
 steps:
-  - uses: susanavenda/devops-toolkit/.github/actions/docker-build@main
+  - uses: susanavenda/devops-libs/.github/actions/docker-build@main
     with:
       image-name: 'myapp'
       tags: 'latest'

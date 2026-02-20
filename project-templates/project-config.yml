@@ -35,6 +35,6 @@ infrastructure:
   terraform-version: ${TERRAFORM_VERSION:-1.6.0}
   infrastructure-path: ${INFRASTRUCTURE_PATH:-infrastructure}
   
-devops-toolkit:
-  repository: ${DEVOPS_TOOLKIT_REPO:-susanavenda/devops-toolkit}
-  branch: ${DEVOPS_TOOLKIT_BRANCH:-main}
+devops-libs:
+  repository: ${DEVOPS_LIBS_REPO:-susanavenda/devops-libs}
+  branch: ${DEVOPS_LIBS_BRANCH:-main}

@@ -109,8 +109,8 @@ infrastructure:
   terraform-version: 1.6.0
   infrastructure-path: infrastructure
 
-devops-toolkit:
-  repository: susanavenda/devops-toolkit
+devops-libs:
+  repository: susanavenda/devops-libs
   branch: main
 EOF
 

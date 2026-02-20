@@ -53,7 +53,7 @@ jobs:
 
       - name: Provision Infrastructure
         if: inputs.action == 'provision'
-        uses: susanavenda/devops-toolkit/.github/workflows/infrastructure-provision.yml@main
+        uses: susanavenda/devops-libs/.github/workflows/infrastructure-provision.yml@main
         with:
           project-name: ${{ steps.detect.outputs.project-name }}
           app-type: ${{ steps.detect.outputs.app-type }}

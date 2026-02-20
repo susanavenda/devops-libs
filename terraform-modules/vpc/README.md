@@ -6,7 +6,7 @@ Reusable Terraform module for creating an Amazon VPC with public and private sub
 
 ```hcl
 module "vpc" {
-  source = "github.com/susanavenda/devops-toolkit//terraform/modules/vpc?ref=main"
+  source = "git::https://github.com/susanavenda/devops-libs//terraform-modules/vpc?ref=main"
 
   name       = "my-vpc"
   cidr_block = "10.0.0.0/16"

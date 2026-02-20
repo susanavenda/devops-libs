@@ -6,7 +6,7 @@ Reusable Terraform module for creating an Amazon S3 bucket with versioning, encr
 
 ```hcl
 module "s3" {
-  source = "github.com/susanavenda/devops-toolkit//terraform/modules/s3?ref=main"
+  source = "git::https://github.com/susanavenda/devops-libs//terraform-modules/s3?ref=main"
 
   bucket_name      = "my-bucket-name"
   enable_versioning = true

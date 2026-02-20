@@ -33,7 +33,7 @@ on:
 
 jobs:
   pipeline:
-    uses: susanavenda/devops-toolkit/.github/workflows/golden-pipeline.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/golden-pipeline.yml@main
     with:
       # Required: Language identification
       language: nodejs  # Options: nodejs, java, python, go, dotnet
@@ -69,7 +69,7 @@ jobs:
 ```yaml
 jobs:
   pipeline:
-    uses: susanavenda/devops-toolkit/.github/workflows/golden-pipeline.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/golden-pipeline.yml@main
     with:
       language: nodejs
       runtime-version: '20'
@@ -86,7 +86,7 @@ jobs:
 ```yaml
 jobs:
   pipeline:
-    uses: susanavenda/devops-toolkit/.github/workflows/golden-pipeline.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/golden-pipeline.yml@main
     with:
       language: java
       runtime-version: '21'
@@ -103,7 +103,7 @@ jobs:
 ```yaml
 jobs:
   pipeline:
-    uses: susanavenda/devops-toolkit/.github/workflows/golden-pipeline.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/golden-pipeline.yml@main
     with:
       language: python
       runtime-version: '3.11'
@@ -120,7 +120,7 @@ jobs:
 ```yaml
 jobs:
   pipeline:
-    uses: susanavenda/devops-toolkit/.github/workflows/golden-pipeline.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/golden-pipeline.yml@main
     with:
       language: go
       runtime-version: '1.21'
@@ -204,14 +204,14 @@ If you're currently using language-specific pipelines (`golden-pipeline-nodejs.y
 ```yaml
 jobs:
   pipeline:
-    uses: susanavenda/devops-toolkit/.github/workflows/golden-pipeline-nodejs.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/golden-pipeline-nodejs.yml@main
 ```
 
 **After:**
 ```yaml
 jobs:
   pipeline:
-    uses: susanavenda/devops-toolkit/.github/workflows/golden-pipeline.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/golden-pipeline.yml@main
     with:
       language: nodejs
       # ... other configuration
@@ -232,4 +232,4 @@ Projects implementing the Golden Pipeline interface automatically comply with:
 For questions or issues:
 - See [DevSecOps Pipeline Guide](devsecops-pipeline.md)
 - Check [Project Integration Guide](../PROJECT_INTEGRATION.md)
-- Review workflow examples in `devops-toolkit/.github/workflows/`
+- Review workflow examples in `devops-libs/.github/workflows/`

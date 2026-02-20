@@ -6,7 +6,7 @@ Reusable Terraform module for creating an Amazon EKS cluster with best practices
 
 ```hcl
 module "eks_cluster" {
-  source = "github.com/susanavenda/devops-toolkit//terraform/modules/eks-cluster?ref=v1.0.0"
+  source = "git::https://github.com/susanavenda/devops-libs//terraform-modules/eks-cluster?ref=main"
 
   cluster_name      = "my-eks-cluster"
   kubernetes_version = "1.28"

@@ -13,7 +13,7 @@ Every project workflow **MUST** include:
 ```yaml
 jobs:
   pipeline:
-    uses: susanavenda/devops-toolkit/.github/workflows/golden-pipeline.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/golden-pipeline.yml@main
     with:
       language: <nodejs|java|python|go|dotnet>
       install-command: '<command>'
@@ -37,14 +37,14 @@ on:
 jobs:
   # Main pipeline - REQUIRED
   pipeline:
-    uses: susanavenda/devops-toolkit/.github/workflows/golden-pipeline.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/golden-pipeline.yml@main
     with:
       # ... configuration
 
   # Infrastructure security - REQUIRED if infrastructure/ exists
   infrastructure-security:
     if: hashFiles('infrastructure/**/*.tf') != ''
-    uses: susanavenda/devops-toolkit/.github/workflows/infrastructure-security.yml@main
+    uses: susanavenda/devops-libs/.github/workflows/infrastructure-security.yml@main
     with:
       working-directory: 'infrastructure'
 ```
@@ -232,7 +232,7 @@ Exceptions to conventions **MUST** be:
 ## Updates
 
 Conventions are updated through:
-- `devops-toolkit` repository
+- `devops-libs` repository
 - Pull request process
 - Team consensus
 - Documentation updates

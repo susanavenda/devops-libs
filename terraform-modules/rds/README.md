@@ -6,7 +6,7 @@ Reusable Terraform module for creating an Amazon RDS instance with best practice
 
 ```hcl
 module "rds" {
-  source = "github.com/susanavenda/devops-toolkit//terraform/modules/rds?ref=v1.0.0"
+  source = "git::https://github.com/susanavenda/devops-libs//terraform-modules/rds?ref=main"
 
   name          = "my-database"
   engine        = "postgres"
